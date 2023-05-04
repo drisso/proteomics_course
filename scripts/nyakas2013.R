@@ -1,5 +1,5 @@
-library("devtools")
-install_github("sgibb/MALDIquantExamples")
+# library("devtools")
+# install_github("sgibb/MALDIquantExamples")
 
 ## the main MALDIquant package
 library("MALDIquant")
@@ -10,7 +10,7 @@ library("MALDIquantExamples")
 
 ## import the spectra
 spectra_imp <- import(getPathNyakas2013(), verbose=FALSE)
-# spectra <- smoothIntensity(spectra_imp, method="SavitzkyGolay", 
+# spectra <- smoothIntensity(spectra_imp, method="SavitzkyGolay",
 #                            halfWindowSize=5)
 # baseline <- estimateBaseline(spectra[[100]], method="SNIP", iterations=50)
 # plot(spectra_imp[[100]])
@@ -62,3 +62,139 @@ rgbCluster <- function(x) {
   col[x, ]
 }
 plotMsiSlice(m, colRamp=rgbCluster, scale=FALSE)
+
+## 1. Dimensionality reduction
+
+## Simple PCA with prcomp
+system.time(pca <- prcomp(intMatrix, scale=TRUE))
+plot(pca, type='l')
+pca_summary <- summary(pca)
+pca_summary$importance[,1:10]
+
+## The Bioconductor BiocSingular package implements several faster algorithms
+library(BiocSingular)
+system.time(rpca <- runPCA(intMatrix, rank=50, scale=TRUE, BSPARAM = RandomParam()))
+system.time(ipca <- runPCA(intMatrix, rank=50, scale=TRUE, BSPARAM = IrlbaParam()))
+
+## Visualize PCA
+library(ggplot2)
+theme_set(theme_classic())
+
+df <- as.data.frame(cbind(ipca$x, coord))
+df$kmeans2 <- as.factor(km$cluster)
+
+ggplot(df, aes(x, y, color=kmeans2)) +
+    geom_point()
+
+ggplot(df, aes(PC1, PC2, color=kmeans2)) +
+    geom_point()
+
+ggplot(df, aes(x, y, color=PC1)) +
+    geom_point() +
+    scale_color_viridis_c(option = "magma")
+
+ggplot(df, aes(x, y, color=PC2)) +
+    geom_point() +
+    scale_color_viridis_c(option = "magma")
+
+ggplot(df, aes(PC1, PC2, color=y)) +
+    geom_point() +
+    scale_color_viridis_c(option = "magma")
+
+## T-sne
+library(Rtsne)
+## system.time(tsne1 <- Rtsne(intMatrix))
+system.time(tsne <- Rtsne(ipca$x[,1:50], pca=FALSE))
+
+df$tsne1 <- tsne$Y[,1]
+df$tsne2 <- tsne$Y[,2]
+
+ggplot(df, aes(tsne1, tsne2, color=kmeans2)) +
+    geom_point()
+
+## 2. Clustering
+
+## because of curse of dimensionality, better to cluster in reduced space
+
+## simple k-means
+km_rid <- kmeans(ipca$x, centers=2)
+
+## compare with k-means on full data
+table(km$cluster, km_rid$cluster)
+df$kmeans2rid <- as.factor(km_rid$cluster)
+
+ggplot(df, aes(PC1, PC2, color=kmeans2rid)) +
+    geom_point()
+
+ggplot(df, aes(x, y, color=kmeans2rid)) +
+    geom_point()
+
+ggplot(df, aes(tsne1, tsne2, color=kmeans2rid)) +
+    geom_point()
+
+## evaluate clustering: Silhouette
+library(cluster)
+d <- dist(ipca$x)
+sil <- silhouette(km_rid$cluster, d)
+plot(sil)
+
+## use silhouette to choose number of clusters
+ks <- 2:6
+km_res <- lapply(ks, function(k) kmeans(ipca$x, centers=k))
+sapply(km_res, function(x) mean(silhouette(x$cluster, d)[,3]))
+
+df$kmeans4rid <- as.factor(km_res[[3]]$cluster)
+
+ggplot(df, aes(PC1, PC2, color=kmeans4rid)) +
+    geom_point()
+
+ggplot(df, aes(x, y, color=kmeans4rid)) +
+    geom_point()
+
+ggplot(df, aes(tsne1, tsne2, color=kmeans4rid)) +
+    geom_point()
+
+## hierarchical clustering
+hc <- hclust(d)
+plot(as.dendrogram(hc))
+df$hclust6<- as.factor(cutree(hc, k=6))
+
+ggplot(df, aes(PC1, PC2, color=hclust6)) +
+    geom_point()
+
+ggplot(df, aes(x, y, color=hclust6)) +
+    geom_point()
+
+ggplot(df, aes(tsne1, tsne2, color=hclust6)) +
+    geom_point()
+
+## network-based clustering (walktrap method)
+
+## first compute the shared nearest neighbor graph
+library(bluster)
+graph <- makeSNNGraph(ipca$x)
+
+## then we can use several algorithms (here walktrap and louvain)
+cl <- igraph::cluster_walktrap(graph)
+cl2 <- igraph::cluster_louvain(graph)
+
+df$cl_walktrap <- as.factor(cl$membership)
+df$cl_louvain <- as.factor(cl2$membership)
+
+ggplot(df, aes(PC1, PC2, color=cl_louvain)) +
+    geom_point()
+
+ggplot(df, aes(x, y, color=cl_louvain)) +
+    geom_point()
+
+ggplot(df, aes(tsne1, tsne2, color=cl_louvain)) +
+    geom_point()
+
+## compare results
+library(mclust)
+adjustedRandIndex(df$cl_louvain, df$cl_walktrap)
+adjustedRandIndex(df$cl_louvain, df$kmeans4rid)
+adjustedRandIndex(df$cl_louvain, df$hclust6)
+
+
+
