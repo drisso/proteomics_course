@@ -152,16 +152,16 @@ predfun <- function(Xtrain, Ytrain, Xtest, Ytest,
   ra <- sda.ranking(Xtrain, Ytrain,
                     verbose=FALSE, diagonal=diagonal, fdr=FALSE)
   selVars <- ra[,"idx"][1:numVars]
-  
+
   # fit and predict
   sda.out <- sda(Xtrain[, selVars, drop=FALSE], Ytrain,
                  diagonal=diagonal, verbose=FALSE)
   ynew <- predict(sda.out, Xtest[, selVars, drop=FALSE],
                   verbose=FALSE)$class
-  
+
   # compute accuracy
   acc <- mean(Ytest == ynew)
-  
+
   return(acc)
 }
 
@@ -211,3 +211,21 @@ result.sim <- cbind(nPeaks=npeaks,
 ## ----cvoptimaltablelatex, echo=FALSE, results="asis"---------------------
 #xtable(result.sim, booktabs=TRUE, digits=c(0, 0, 3, 3))
 View(result.sim)
+
+### pca
+pca <- prcomp(featureMatrix, scale. = TRUE)
+plot(pca$x)
+
+library(ggplot2)
+theme_set(theme_classic())
+
+df <- as.data.frame(pca$x)
+df$species <- species
+
+ggplot(df, aes(PC1, PC2, color=species)) +
+    geom_point()
+
+
+s <- summary(pca)
+round(s$importance[,1:10], 2)
+plot(pca, type='l')

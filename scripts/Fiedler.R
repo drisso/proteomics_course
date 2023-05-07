@@ -144,3 +144,17 @@ cv.out <- crossval(predfun.dda,
                    negative="control",
                    verbose=FALSE)
 diagnosticErrors(cv.out$stat)
+
+
+### pca
+pca <- prcomp(featureMatrix, scale. = TRUE)
+plot(pca$x)
+
+library(ggplot2)
+theme_set(theme_classic())
+
+df <- as.data.frame(pca$x)
+df$status <- avgSpectra.info$health
+
+ggplot(df, aes(PC1, PC2, color=status)) +
+    geom_point()

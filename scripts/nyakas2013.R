@@ -101,6 +101,36 @@ ggplot(df, aes(PC1, PC2, color=y)) +
     geom_point() +
     scale_color_viridis_c(option = "magma")
 
+ggplot(df, aes(PC1, PC2)) +
+    geom_point()
+
+idx <- names(sort(abs(pca$rotation[,1]), decreasing = TRUE))[1]
+
+df$prot1 <- intMatrix[,idx]
+
+p1 <- ggplot(df, aes(PC1, PC2, color=prot1)) +
+    geom_point() +
+    scale_color_viridis_c(option = "magma")
+
+p2 <- ggplot(df, aes(x, y, color=prot1)) +
+    geom_point() +
+    scale_color_viridis_c(option = "magma")
+
+idx <- names(sort(abs(pca$rotation[,2]), decreasing = TRUE))[1]
+
+df$prot2 <- intMatrix[,idx]
+
+p3 <- ggplot(df, aes(PC1, PC2, color=prot2)) +
+    geom_point() +
+    scale_color_viridis_c(option = "magma")
+
+p4 <- ggplot(df, aes(x, y, color=prot2)) +
+    geom_point() +
+    scale_color_viridis_c(option = "magma")
+
+library(patchwork)
+p1 + p2 + p3 + p4
+
 ## T-sne
 library(Rtsne)
 ## system.time(tsne1 <- Rtsne(intMatrix))
@@ -109,8 +139,17 @@ system.time(tsne <- Rtsne(ipca$x[,1:50], pca=FALSE))
 df$tsne1 <- tsne$Y[,1]
 df$tsne2 <- tsne$Y[,2]
 
-ggplot(df, aes(tsne1, tsne2, color=kmeans2)) +
-    geom_point()
+t1 <- ggplot(df, aes(tsne1, tsne2, color=prot1)) +
+    geom_point() +
+    scale_color_viridis_c(option = "magma") +
+    theme(legend.position = "none")
+
+t2 <- ggplot(df, aes(tsne1, tsne2, color=prot2)) +
+    geom_point() +
+    scale_color_viridis_c(option = "magma") +
+    theme(legend.position = "none")
+
+p1 + t1 + p3 + t2
 
 ## 2. Clustering
 
