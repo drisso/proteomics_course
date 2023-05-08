@@ -229,3 +229,7 @@ ggplot(df, aes(PC1, PC2, color=species)) +
 s <- summary(pca)
 round(s$importance[,1:10], 2)
 plot(pca, type='l')
+
+library(factoextra)
+fviz_pca_var(pca)
+fviz_eig(pca)

@@ -224,7 +224,7 @@ ggplot(df, aes(PC1, PC2, color=cl_louvain)) +
     geom_point()
 
 ggplot(df, aes(x, y, color=cl_louvain)) +
-    geom_point()
+    geom_point(size=3)
 
 ggplot(df, aes(tsne1, tsne2, color=cl_louvain)) +
     geom_point()
