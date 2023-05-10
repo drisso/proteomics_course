@@ -34,6 +34,10 @@ ggplot(df, aes(x = PC1, y = PC2, color = species)) +
     geom_vline(xintercept=0, linetype = "dashed") +
     geom_hline(yintercept=0, linetype = "dashed")
 
+library(factoextra)
+fviz_pca_biplot(pca, geom.ind="point", col.ind = penguins$species)
+
+
 ggplot(penguins, aes(x = flipper_length_mm, y = bill_length_mm, color = species)) +
     geom_point() +
     geom_point(data = penguins[1:2,], aes(x = flipper_length_mm, y = bill_length_mm), colour="black", size=4, pch=21, fill=NA, stroke=1)
@@ -43,6 +47,14 @@ data <- penguins[, c("flipper_length_mm", "bill_length_mm")]
 d <- dist(data)
 hc <- hclust(d)
 dend <- as.dendrogram(hc)
+
+library(scran)
+library(igraph)
+g <- buildSNNGraph(t(data), k=5)
+V(g)$color <- palette()[as.numeric(penguins$species)]
+plot(g, layout=as.matrix(data[,1:2]), vertex.label=NA, vertex.size=5)
+cl <- igraph::cluster_louvain(g)
+table(cl$membership)
 
 library(dendextend)
 labels_colors(dend) <- palette()[-1][as.factor(penguins$species)]

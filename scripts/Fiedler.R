@@ -158,3 +158,9 @@ df$status <- avgSpectra.info$health
 
 ggplot(df, aes(PC1, PC2, color=status)) +
     geom_point()
+
+feature_df <- as.data.frame(featureMatrix)
+feature_df <- cbind(feature_df, avgSpectra.info)
+
+ggplot(feature_df, aes(x=health, y=`1011.95683040433`)) +
+    geom_boxplot()
