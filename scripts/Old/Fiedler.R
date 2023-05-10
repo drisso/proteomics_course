@@ -164,3 +164,38 @@ feature_df <- cbind(feature_df, avgSpectra.info)
 
 ggplot(feature_df, aes(x=health, y=`1011.95683040433`)) +
     geom_boxplot()
+
+x <- feature_df$health
+y <- feature_df$`1011.95683040433`
+mtrue <- tapply(y, x, mean)
+diff <- mtrue[1]-mtrue[2]
+
+differences <- sapply(seq_len(10000), function(i) {
+    newy <- sample(y)
+    m <- tapply(newy, x, mean)
+    m[1]-m[2]
+})
+hist(differences)
+abline(v=diff, col=2, lwd=2)
+
+dens <- density(differences, bw=4e-6)
+plot(dens, type='h', col=as.numeric(abs(dens$x)>diff)+1, main="Differences")
+abline(v=c(diff, -diff), col=2, lwd=2)
+
+suby <- round(y*10^4, 2)[c(1:4, 37:40)]
+subx <- x[c(1:4, 37:40)]
+
+df <- data.frame(y = sample(suby), x = subx)
+df
+tmp <- tapply(df$y, df$x, mean)
+tmp[1]-tmp[2]
+
+t.test(y~x, var.equal=TRUE)
+fit <- lm(y~x)
+summary(fit)
+
+x <- as.numeric(as.factor(x))-1
+feature_df$y <- x
+colnames(feature_df)[1:166] <- paste0("x", 1:166)
+fit <- glm(y~x1+x2+x3+x4+x5, family = binomial(), data=feature_df)
+summary(fit)
