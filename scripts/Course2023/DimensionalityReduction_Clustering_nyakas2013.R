@@ -128,7 +128,7 @@ dim(coord)
 df$kmeans2 <- as.factor(km$cluster)
 head(df)
 # Look at the last three columns to see what we added to the pca data.frame
-head(df[2223:2225])
+head(df[,2223:2225])
 
 library(ggplot2)
 # Plot the mouse kidney slice and colour by clustering resulting from kmeans
@@ -201,7 +201,7 @@ p4 <- ggplot(df, aes(x, y, color=prot2)) +
   geom_point() +
   scale_color_viridis_c(option = "magma")
 
-p1 + p2 + p3 + p4
+(p1 + p2)/ (p3 + p4)
 
 
 # Compare PCA with tsne and umap
@@ -355,6 +355,8 @@ corrplot(var$cos2[ind,1:10], is.corr=FALSE)
 #library(BiocSingular)
 #system.time(rpca <- runPCA(intMatrix, rank=50, scale=TRUE, BSPARAM = RandomParam()))
 #system.time(ipca <- runPCA(intMatrix, rank=50, scale=TRUE, BSPARAM = IrlbaParam()))
+
+
 
 
 # 2. Clustering

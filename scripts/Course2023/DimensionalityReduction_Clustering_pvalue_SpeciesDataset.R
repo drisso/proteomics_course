@@ -4,6 +4,9 @@ library("MALDIquant")
 ## the import/export routines for MALDIquant
 library("MALDIquantForeign")
 
+#install.packages("devtools")
+library(devtools)
+#install_github("sgibb/MALDIquantExamples")
 ## example data
 library("MALDIquantExamples")
 
@@ -21,6 +24,7 @@ spectra <- trim(spectra)
 set.seed(123)
 
 ## ----plot----------------------------------------------------------------
+plot(spectra[[1]])
 idx <- sample(length(spectra), size=2)
 plot(spectra[[idx[1]]])
 plot(spectra[[idx[2]]])
@@ -78,6 +82,7 @@ head(spots)
 head(species)
 
 ## ----average-------------------------------------------------------------
+paste0(species,"-",spots)
 avgSpectra <-
   averageMassSpectra(spectra, labels=paste0(species, spots))
 
@@ -89,7 +94,9 @@ col <- rainbow(length(snrs))
 
 ## estimate noise
 noise <- estimateNoise(avgSpectra[[1]],
-                       method="SuperSmoother")
+                       method="MAD")
+#noise <- estimateNoise(avgSpectra[[1]],
+#                       method="SuperSmoother")
 
 plot(avgSpectra[[1]],
      xlim=c(6000, 16000), ylim=c(0, 0.0016))
@@ -125,7 +132,13 @@ table(species)
 #FINAL MATRIX
 featureMatrix <- intensityMatrix(peaks, avgSpectra)
 rownames(featureMatrix) <- paste(species, spots, sep=".")
-
+colnames(featureMatrix)
+# If you want to reduce the number after the comma, use the function round in your original dataset
+newcolnames<-as.numeric(colnames(featureMatrix))
+newcolnames<-round(as.numeric(colnames(featureMatrix)),2)
+newcolnames
+as.character(newcolnames)
+colnames(featureMatrix)<-as.character(newcolnames)
 
 # 1. Dimensionality reduction
 
@@ -158,6 +171,7 @@ library("corrplot")
 corrplot(var$cos2, is.corr=FALSE)
 corrplot(var$cos2[1:50,1:10], is.corr=FALSE)
 
+library(patchwork)
 # The function fviz_contrib() creates a barplot of row/column contributions. 
 fviz_contrib(pca, choice = "var", axes = 1:2)
 fviz_contrib(pca, choice = "var", axes = 1:2, top=50)
@@ -178,17 +192,31 @@ fviz_pca_biplot(pca, label ="var", col.ind="cos2", select.var = list(cos2 = 10))
 fviz_pca_var(pca, col.var="contrib", select.var = list(cos2 = 10))+
   scale_color_gradient2(low="white", mid="blue",high="red", midpoint=96) +
   theme_minimal()
-# Ops... pay attention to midpoint
+# Ops... pay attention to midpoint, must stay in the range of "contrib"
 # Control variable colors using their contributions
 fviz_pca_var(pca, col.var="contrib", select.var = list(cos2 = 10))+
   scale_color_gradient2(low="white", mid="blue",high="red", midpoint=0.403) +
   theme_minimal()
-# If you want to minimize the number after the comma, use the function round in your original dataset
-colnames(featureMatrix)
-newcolnames<-as.numeric(colnames(featureMatrix))
-newcolnames<-round(as.numeric(colnames(featureMatrix)),2)
-newcolnames
-as.character(newcolnames)
+
+
+library(Rtsne)
+# TSNE
+system.time(tsne <- Rtsne(pca$x[,1:10], pca=FALSE,perplexity = 10))
+df <- as.data.frame(cbind(pca$x))
+# extract the first two components
+df$tsne1_pca <- tsne$Y[,1]
+df$tsne2_pca <- tsne$Y[,2]
+df$species<-species
+# plot
+p_tsne_pca<-ggplot(df, aes(tsne1_pca, tsne2_pca, color=species)) +
+  geom_point()+theme_classic()
+p_pca<-ggplot(df, aes(PC1, PC2, color=species)) +
+  geom_point()+theme_classic()
+
+# compare tsne vs pca
+p_pca+p_tsne_pca
+
+
 
 
 
@@ -224,7 +252,7 @@ df <- as.data.frame(pca$x)
 df$kmeans_rid <- as.factor(km_rid$cluster)
 # see clustering results of kmeans on dimensionality reduction space
 p_pca<-ggplot(df, aes(PC1, PC2, color=kmeans_rid)) +
-  geom_point()
+  geom_point()+theme_classic()
 p_pca
 
 # Compare k-means with the number of species
@@ -249,7 +277,7 @@ df$hclust4<- as.factor(cutree(hc, k=4))
 #compare with the k-means clustering result
 table(df$hclust4,df$kmeans_rid)
 p_pca_h<-ggplot(df, aes(PC1, PC2, color=hclust4)) +
-  geom_point()
+  geom_point()+theme_classic()
 p_pca+p_pca_h
 
 # Clustering linkage
@@ -290,6 +318,23 @@ species[which(df$hclust4_complete==3 & df$hclust4_average==1)]
 species[which(df$hclust4_single==3 & df$hclust4_average==1)]
 
 
+table(df$hclust4,df$kmeans_rid)
+p_pca_h_complete<-ggplot(df, aes(PC1, PC2, color=hclust4_complete)) +
+  geom_point()+theme_classic()
+p_pca_h_average<-ggplot(df, aes(PC1, PC2, color=hclust4_average)) +
+  geom_point()+theme_classic()
+p_pca_h_single<-ggplot(df, aes(PC1, PC2, color=hclust4_single)) +
+  geom_point()+theme_classic()
+p_pca+p_pca_h_complete+p_pca_h_average+p_pca_h_single
+
+
+summary(featureMatrix[which(df$hclust4_average==1),])
+summary(featureMatrix[which(df$hclust4_average==2),])
+summary(featureMatrix[which(df$hclust4_average==3),])
+summary(featureMatrix[which(df$hclust4_average==4),])
+
+
+
 
 # 3. From p-value to penalized regression
 library("tableone")
@@ -317,15 +362,15 @@ data_prot$OUTCOME<-species
 vars <-c(names(data_prot)[1:448])
 strata<-c("OUTCOME")
 nonorm<-c(names(data_prot)[1:448])
+# calculate median and IQR, use in print the arguments: nonnormal = nonorm
 table1 <- CreateTableOne(vars=vars,data = data_prot,strata=strata,includeNA = T,addOverall = T)
 table1 <- print(table1,nonnormal = nonorm,printToggle=FALSE,showAllLevels = T,formatOptions = list(big.mark = ","),explain=T)
 View(table1)
+# calculate mean and SD, delete in print the arguments: nonnormal = nonorm
 table1 <- CreateTableOne(vars=vars,data = data_prot,strata=strata,includeNA = T,addOverall = T)
 table1 <- print(table1,printToggle=FALSE,showAllLevels = T,formatOptions = list(big.mark = ","),explain=T)
 View(table1)
 
-p_value<-table1[,7]
-p_value<-table1[-1,7]
 
 tableOne <- CreateTableOne(vars=vars,data = data_prot,strata=strata,includeNA = T,addOverall = T)
 attributes(tableOne)
@@ -359,7 +404,7 @@ length(which(p_value_NOnorm<0.05))
 # Create a table with all the p_value under different adjustment to see:
 # - which variables are the most differentially expressed among group
 # - how much change p-value under different adjustment methods
-data_pvalue_all<-data.frame(p_value_norm,p_value_norm_adj_BON,p_value_norm_adj_BH,p_value_norm_adj_HOLM)
+data_pvalue_all<-data.frame(p_value_norm,p_value_norm_adj_BON,p_value_norm_adj_BH,p_value_norm_adj_HOLM,p_value_NOnorm)
 rownames(data_pvalue_all)<-names(data_prot)[1:448]
 View(data_pvalue_all)
 data_pvalue_all_order<-data_pvalue_all[order(data_pvalue_all$p_value_norm, decreasing = FALSE), ]
@@ -388,16 +433,16 @@ library(glmnet)
 # which is required for the glmnet() function.
 
 # Dummy code categorical predictor variables
-x <- model.matrix(OUTCOME~., data_prot)[,-1]
-# Convert the outcome (class) to a numerical variable
-y <- data_prot$OUTCOME
+x <- model.matrix(~., data_prot)
+x <- model.matrix(~., data_prot)[,-c(1,450:452)]
+# outcome (class), must be transformed in numeric
+y <- as.numeric(data_prot$OUTCOME)
 # R functions
 # We will use the R function glmnet() [glmnet package] 
 # for computing penalized logistic regression.
 
 #The simplified format is as follow:
-  
-glmnet(x, y, family = "multinomial", alpha = 1, lambda = NULL)
+#glmnet(x, y, family = "multinomial", alpha = 1, lambda = NULL)
 
 # x: matrix of predictor variables
 # y: the response or outcome variable, which is a binary variable.
@@ -424,13 +469,17 @@ coef(cv.lasso, cv.lasso$lambda.min)
 coef(cv.lasso, cv.lasso$lambda.1se)
 
 # Final model with lambda.min
-lasso.model <- glmnet(x, y, alpha = 1, family = "multinomial",
-                      lambda = cv.lasso$lambda.min)
 # Make prediction on test data
-
+x_test <- model.matrix(~., data_prot)[,-c(1,450:452)]
+y_multi_pred_class <- as.numeric(predict(cv.lasso, newx = x_test, type = "class", s = cv.lasso$lambda.min))
+lasso_class<-y_multi_pred_class
+table(lasso_class,species)
 
 
 # Final model with lambda.1se
-lasso.model <- glmnet(x, y, alpha = 1, family = "binomial",
-                      lambda = cv.lasso$lambda.1se)
 # Make prediction on test data
+x_test <- model.matrix(~., data_prot)[,-c(1,450:452)]
+y_multi_pred_class <- as.numeric(predict(cv.lasso, newx = x_test, type = "class", s = cv.lasso$lambda.min))
+y_multi_pred_class_responseProb <- as.numeric(predict(cv.lasso, newx = x_test, type = "response", s = cv.lasso$lambda.min))
+lasso_class<-y_multi_pred_class
+table(lasso_class,species)
