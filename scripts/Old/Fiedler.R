@@ -199,3 +199,41 @@ feature_df$y <- x
 colnames(feature_df)[1:166] <- paste0("x", 1:166)
 fit <- glm(y~x1+x2+x3+x4+x5, family = binomial(), data=feature_df)
 summary(fit)
+eta <- predict(fit)
+expected <- exp(-eta)/(1+exp(-eta))
+table(expected>.5, feature_df$health)
+
+subset <- feature_df[,c(1:166, 172)]
+fit <- glm(y~., family = binomial(), data=subset)
+summary(fit)
+
+library("crossval")
+fun <- function(Xtrain, Ytrain, Xtest, Ytest, negative) {
+    train <- cbind(Ytrain, Xtrain)
+    names(train)[1] <- "y"
+    fit <- glm(y~., family = binomial(), data=train)
+    eta <- predict(fit, newdata = Xtest)
+    expected <- exp(-eta)/(1+exp(-eta))
+    ynew <- as.numeric(expected>.5)
+    return(confusionMatrix(Ytest, ynew, negative=negative))
+}
+
+cv.out <- crossval(fun,
+                   X=subset[,1:5],
+                   Y=subset$y,
+                   K=10, B=20,
+                   negative="control",
+                   verbose=FALSE)
+diagnosticErrors(cv.out$stat)
+
+
+library(glmnet)
+Xtrain <- as.matrix(subset[,-ncol(subset)])
+Xtrain <- scale(Xtrain)
+cv <- cv.glmnet(x=Xtrain, y=subset$y, family=binomial())
+plot(cv)
+fit <- glmnet(x=Xtrain, y=subset$y, family=binomial())
+plot(fit, xvar = "lambda")
+
+fit <- glmnet(x=Xtrain, y=subset$y, family=binomial(), lambda=cv$lambda.1se)
+coef(fit)
