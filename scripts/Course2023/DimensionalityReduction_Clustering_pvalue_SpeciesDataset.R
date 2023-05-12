@@ -274,6 +274,15 @@ table(cutree(hc, h = 30))
 # Cut by number of cluster
 df$hclust4<- as.factor(cutree(hc, k=4))
 
+library(cluster)
+png(filename="sil_h.png", width=900, height = 580)
+plot(silhouette(as.numeric(df$hclust4), dist=d), col=df$hclust4)
+dev.off()
+png(filename="sil_k.png", width=900, height = 580)
+plot(silhouette(as.numeric(df$kmeans_rid), dist=d), col=df$kmeans_rid)
+dev.off()
+
+
 #compare with the k-means clustering result
 table(df$hclust4,df$kmeans_rid)
 p_pca_h<-ggplot(df, aes(PC1, PC2, color=hclust4)) +
@@ -332,6 +341,16 @@ summary(featureMatrix[which(df$hclust4_average==1),])
 summary(featureMatrix[which(df$hclust4_average==2),])
 summary(featureMatrix[which(df$hclust4_average==3),])
 summary(featureMatrix[which(df$hclust4_average==4),])
+
+
+# library(scran)
+# library(igraph)
+# xy <- pca$x
+# xy$lab <- df$species
+# Attention: k is the number of neighborhood, not the number if clusters
+# g <- buildSNNGraph(t(xy), k=10)
+# Attention: if the number of observation is too high, skip the plot
+# plot(g)
 
 
 
