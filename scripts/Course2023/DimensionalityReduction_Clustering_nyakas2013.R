@@ -128,7 +128,7 @@ dim(coord)
 df$kmeans2 <- as.factor(km$cluster)
 head(df)
 # Look at the last three columns to see what we added to the pca data.frame
-head(df[2223:2225])
+head(df[,2223:2225])
 
 library(ggplot2)
 # Plot the mouse kidney slice and colour by clustering resulting from kmeans
@@ -201,7 +201,7 @@ p4 <- ggplot(df, aes(x, y, color=prot2)) +
   geom_point() +
   scale_color_viridis_c(option = "magma")
 
-p1 + p2 + p3 + p4
+(p1 + p2)/ (p3 + p4)
 
 
 # Compare PCA with tsne and umap
@@ -355,6 +355,8 @@ corrplot(var$cos2[ind,1:10], is.corr=FALSE)
 #library(BiocSingular)
 #system.time(rpca <- runPCA(intMatrix, rank=50, scale=TRUE, BSPARAM = RandomParam()))
 #system.time(ipca <- runPCA(intMatrix, rank=50, scale=TRUE, BSPARAM = IrlbaParam()))
+
+
 
 
 # 2. Clustering
@@ -532,4 +534,34 @@ plot(hclust.average, main = "Average")
 # Plot dendrogram of hclust.single
 plot(hclust.single, main = "Single")
 
-table(df$hclust5,df$kmeans5rid)
+
+
+
+# ## network-based clustering (walktrap method)
+# 
+# ## first compute the shared nearest neighbor graph
+# library(bluster)
+# graph <- makeSNNGraph(ipca$x)
+# 
+# ## then we can use several algorithms (here walktrap and louvain)
+# cl <- igraph::cluster_walktrap(graph)
+# cl2 <- igraph::cluster_louvain(graph)
+# 
+# df$cl_walktrap <- as.factor(cl$membership)
+# df$cl_louvain <- as.factor(cl2$membership)
+# 
+# ggplot(df, aes(PC1, PC2, color=cl_louvain)) +
+#   geom_point()
+# 
+# ggplot(df, aes(x, y, color=cl_louvain)) +
+#   geom_point(size=3)
+# 
+# ggplot(df, aes(tsne1, tsne2, color=cl_louvain)) +
+#   geom_point()
+# 
+# ## compare results
+# library(mclust)
+# adjustedRandIndex(df$cl_louvain, df$cl_walktrap)
+# adjustedRandIndex(df$cl_louvain, df$kmeans5rid)
+# adjustedRandIndex(df$cl_louvain, df$hclust5)
+# table(df$hclust5,df$kmeans5rid)
