@@ -85,6 +85,8 @@ png(filename="sil.png", width=900, height = 580)
 plot(silhouette(k3$cluster, dist=d), col=palette()[sort(k3$cluster)])
 dev.off()
 
+
+set.seed(1231422)
 xy <- data.frame(x=rnorm(10), y=rnorm(10))
 xy$lab <- as.character(1:10)
 
@@ -98,9 +100,13 @@ ggplot(xy, aes(x, y)) +
 
 library(scran)
 library(igraph)
-g <- buildSNNGraph(t(xy), k=3)
+g <- buildSNNGraph(t(xy[,1:2]), k=3)
+d <- dist(xy[,1:2])
 plot(g, layout=as.matrix(xy[,1:2]))
 
 ggplot(xy, aes(x, y)) +
-    geom_point(size=5, color=palette()[7]) +
+    geom_point(size=11, color=palette()[7]) +
     geom_text(aes(label=lab))
+
+
+
