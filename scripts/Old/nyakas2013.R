@@ -151,6 +151,26 @@ t2 <- ggplot(df, aes(tsne1, tsne2, color=prot2)) +
 
 p1 + t1 + p3 + t2
 
+## UMAP
+library(uwot)
+system.time(um <- umap(ipca$x[,1:50]))
+
+df$umap1 <- um[,1]
+df$umap2 <- um[,2]
+
+u1 <- ggplot(df, aes(umap1, umap2, color=prot1)) +
+    geom_point() +
+    scale_color_viridis_c(option = "magma") +
+    theme(legend.position = "none")
+
+u2 <- ggplot(df, aes(umap1, umap2, color=prot2)) +
+    geom_point() +
+    scale_color_viridis_c(option = "magma") +
+    theme(legend.position = "none")
+
+(p1 + t1 + u1) / (p3 + t2 + u2)
+
+
 ## 2. Clustering
 
 ## because of curse of dimensionality, better to cluster in reduced space
